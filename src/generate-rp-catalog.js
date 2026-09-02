@@ -117,9 +117,25 @@ const results = await mapConcurrent(extensionIds, concurrency, async (id) => {
         version.version === registryEntry.version,
     ) ?? null;
   if (!metadata) {
-    throw new Error(
-      `Official registry has no ${id}@${registryEntry.version} metadata.`,
-    );
+    if (addition) {
+      throw new Error(
+        `RP addition has no ${id}@${registryEntry.version} metadata.`,
+      );
+    }
+    return {
+      metadata: null,
+      versions,
+      package: null,
+      unavailable: {
+        id,
+        version: registryEntry.version,
+        reason: "not-published-by-upstream",
+        published_versions: versions.map(
+          /** @param {ExtensionMetadata} version */ (version) =>
+            version.version,
+        ),
+      },
+    };
   }
 
   const archiveUrl = addition
@@ -150,6 +166,7 @@ const results = await mapConcurrent(extensionIds, concurrency, async (id) => {
   return {
     metadata,
     versions,
+    unavailable: null,
     package: {
       id,
       version: registryEntry.version,
@@ -164,8 +181,19 @@ const results = await mapConcurrent(extensionIds, concurrency, async (id) => {
   };
 });
 
-const packages = results.map((result) => result.package);
-validatePackageRecords(packages, extensionIds);
+const data = results.flatMap((result) =>
+  result.metadata ? [result.metadata] : [],
+);
+const packages = results.flatMap((result) =>
+  result.package ? [result.package] : [],
+);
+const unavailableSourceEntries = results.flatMap((result) =>
+  result.unavailable ? [result.unavailable] : [],
+);
+validatePackageRecords(
+  packages,
+  data.map((metadata) => metadata.id),
+);
 
 await fs.rm(outputRoot, { recursive: true, force: true });
 await fs.mkdir(outputRoot, { recursive: true });
@@ -233,13 +261,30 @@ const catalog = {
   },
   entry_count: extensionIds.length,
   upstream_entry_count: Object.keys(upstream).length,
+  published_upstream_entry_count:
+    Object.keys(upstream).length - unavailableSourceEntries.length,
   additions: Object.entries(config.additions).map(([id, addition]) => ({
     id,
     version: addition.version,
     source_repository: addition.source_repository,
     source_revision: addition.source_revision,
   })),
-  data: results.map((result) => result.metadata),
+  source_entries: extensionIds.map((id) => {
+    const registryEntry = current[id];
+    const source = registryEntry ? sources[registryEntry.submodule] : undefined;
+    if (!registryEntry || !source) {
+      throw new Error(`Missing source entry for ${id}.`);
+    }
+    return {
+      id,
+      version: registryEntry.version,
+      source_repository: source.url,
+      source_revision: source.revision,
+      available: !unavailableSourceEntries.some((entry) => entry.id === id),
+    };
+  }),
+  unavailable_source_entries: unavailableSourceEntries,
+  data,
   versions,
   packages,
 };
@@ -260,7 +305,7 @@ await Promise.all([
 ]);
 
 console.log(
-  `Generated ${extensionIds.length} entries (${Object.keys(upstream).length} upstream + ${Object.keys(config.additions).length} RP) with catalog SHA-256 ${catalogDigest}.`,
+  `Generated ${extensionIds.length} source entries and ${packages.length} installable packages (${unavailableSourceEntries.length} upstream unavailable) with catalog SHA-256 ${catalogDigest}.`,
 );
 
 async function readAdditionManifests() {

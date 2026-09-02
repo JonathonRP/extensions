@@ -12,11 +12,17 @@ identified upstream revision and carries declared RP additions.
 - JSON Schema: <https://jonathonrp.github.io/extensions/rp-catalog/v1/schema.json>
 - Workflow: <https://github.com/JonathonRP/extensions/actions/workflows/rp-catalog.yml>
 
-Schema version 1 contains the existing Zed `ExtensionMetadata` fields in
-`data`, all known official version metadata in `versions`, and one integrity
-record per current package in `packages`. Each package binds its ID, version,
+Schema version 1 contains every mirrored registry record in `source_entries`,
+the existing Zed `ExtensionMetadata` fields for installable releases in `data`,
+all known official version metadata in `versions`, and one integrity record per
+installable current package in `packages`. Each package binds its ID, version,
 schema/Wasm compatibility, immutable source repository and Git revision,
 archive byte size, archive SHA-256, and HTTPS download URL.
+
+An upstream source entry that has no matching package in the official service
+remains visible in `source_entries` and is identified in
+`unavailable_source_entries`; it is never presented as installable and no
+unverifiable archive is synthesized.
 
 Official entries use Zed's exact-version download route and permit only its API
 and extension object-store hosts. RP additions are packaged with the same
