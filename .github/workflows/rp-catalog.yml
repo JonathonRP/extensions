@@ -119,6 +119,7 @@ jobs:
         env:
           CURRENT_CATALOG_URL: https://jonathonrp.github.io/extensions/rp-catalog/v1/catalog.json
           RP_CATALOG_CONCURRENCY: "8"
+          SNAPSHOT_REVISION: ${{ github.run_id }}
 
       - name: Configure Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5

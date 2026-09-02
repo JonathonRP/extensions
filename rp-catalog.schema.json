@@ -8,23 +8,32 @@
     "channel",
     "label",
     "generated_at",
+    "snapshot_revision",
+    "snapshot_taken_at",
     "source",
     "integrity",
     "entry_count",
+    "installable_entry_count",
     "upstream_entry_count",
     "published_upstream_entry_count",
+    "entries_sha256",
     "additions",
     "source_entries",
     "unavailable_source_entries",
+    "revocations",
+    "yanks",
     "data",
     "versions",
-    "packages"
+    "packages",
+    "package_index"
   ],
   "properties": {
     "schema_version": { "const": 1 },
     "channel": { "const": "rp-stable" },
     "label": { "const": "RP Extensions" },
     "generated_at": { "type": "string", "format": "date-time" },
+    "snapshot_revision": { "type": "string", "pattern": "^[0-9]+$" },
+    "snapshot_taken_at": { "type": "string", "format": "date-time" },
     "source": {
       "type": "object",
       "required": [
@@ -39,12 +48,14 @@
       "required": [
         "catalog_digest_algorithm",
         "catalog_digest_url",
-        "allowed_archive_hosts"
+        "authorities"
       ]
     },
     "entry_count": { "type": "integer", "minimum": 1 },
+    "installable_entry_count": { "type": "integer", "minimum": 1 },
     "upstream_entry_count": { "type": "integer", "minimum": 1 },
     "published_upstream_entry_count": { "type": "integer", "minimum": 0 },
+    "entries_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "additions": {
       "type": "array",
       "items": {
@@ -54,6 +65,8 @@
     },
     "source_entries": { "type": "array" },
     "unavailable_source_entries": { "type": "array" },
+    "revocations": { "type": "array" },
+    "yanks": { "type": "array" },
     "data": { "type": "array" },
     "versions": { "type": "object" },
     "packages": {
@@ -63,8 +76,10 @@
         "required": [
           "id",
           "version",
+          "authority",
           "schema_version",
           "wasm_api_version",
+          "registry_revision",
           "source_repository",
           "source_revision",
           "archive_url",
@@ -72,7 +87,8 @@
           "archive_sha256"
         ]
       }
-    }
+    },
+    "package_index": { "type": "object" }
   },
   "additionalProperties": false
 }

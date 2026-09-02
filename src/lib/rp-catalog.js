@@ -19,8 +19,10 @@ import { createHash } from "node:crypto";
  * @typedef {{
  *   id: string,
  *   version: string,
+ *   authority: "upstream" | "rp",
  *   schema_version: number,
  *   wasm_api_version: string | null,
+ *   registry_revision: string,
  *   source_repository: string,
  *   source_revision: string,
  *   archive_url: string,
@@ -162,6 +164,23 @@ export function validatePackageRecords(packages, extensionIds) {
     }
     if (new URL(record.archive_url).protocol !== "https:") {
       throw new Error(`Package "${record.id}" does not use HTTPS.`);
+    }
+    const archiveHost = new URL(record.archive_url).hostname;
+    const expectedHost =
+      record.authority === "upstream"
+        ? "api.zed.dev"
+        : record.authority === "rp"
+          ? "jonathonrp.github.io"
+          : null;
+    if (!expectedHost || archiveHost !== expectedHost) {
+      throw new Error(
+        `Package "${record.id}" has an invalid ${record.authority} authority URL.`,
+      );
+    }
+    if (!/^[a-f0-9]{40}$/.test(record.registry_revision)) {
+      throw new Error(
+        `Package "${record.id}" has an invalid registry revision.`,
+      );
     }
   }
 
