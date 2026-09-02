@@ -1,0 +1,138 @@
+name: RP extension catalog
+
+on:
+  pull_request:
+    branches:
+      - "release/rp-stable"
+  push:
+    branches:
+      - "release/rp-stable"
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: rp-extension-catalog
+  cancel-in-progress: false
+
+env:
+  ZED_EXTENSION_CLI_SHA: 9ee3c503a4bbbc6b4a0f8a789acca4871d773223
+
+jobs:
+  validate:
+    if: github.repository == 'JonathonRP/extensions'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout catalog
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/zed-industries/extensions.git
+          git fetch --no-tags upstream main
+          echo "UPSTREAM_REVISION=$(git merge-base HEAD upstream/main)" >> "$GITHUB_ENV"
+
+      - uses: pnpm/setup@5d160c5bc68a09337ad0d5654e237e03253b5879 # v1
+        with:
+          version: 11
+          runtime: node@24.20.0
+          cache: true
+
+      - name: Validate registry
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm test
+          pnpm validate-rp-registry
+
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        with:
+          toolchain: "1.90"
+          target: "wasm32-wasip2"
+
+      - name: Package Pigments with official tooling
+        run: |
+          git submodule update --init --depth 1 extensions/pigments-lsp
+          wget --quiet "https://zed-extension-cli.nyc3.digitaloceanspaces.com/$ZED_EXTENSION_CLI_SHA/x86_64-unknown-linux-gnu/zed-extension"
+          chmod +x zed-extension
+          pnpm package-extensions pigments-lsp
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          RUSTUP_TOOLCHAIN: "1.90"
+          SHOULD_PUBLISH: "false"
+
+      - name: Preserve package
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rp-pigments-package
+          path: |
+            output/archive.tar.gz
+            output/manifest.json
+          if-no-files-found: error
+
+  publish:
+    if: github.repository == 'JonathonRP/extensions' && github.event_name != 'pull_request' && github.ref == 'refs/heads/release/rp-stable'
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      attestations: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout catalog
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/zed-industries/extensions.git
+          git fetch --no-tags upstream main
+          echo "UPSTREAM_REVISION=$(git merge-base HEAD upstream/main)" >> "$GITHUB_ENV"
+          echo "FORK_REVISION=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - uses: pnpm/setup@5d160c5bc68a09337ad0d5654e237e03253b5879 # v1
+        with:
+          version: 11
+          runtime: node@24.20.0
+          cache: true
+
+      - name: Restore packaged Pigments
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: rp-pigments-package
+          path: output
+
+      - name: Generate complete integrity catalog
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm generate-rp-catalog
+        env:
+          CURRENT_CATALOG_URL: https://jonathonrp.github.io/extensions/rp-catalog/v1/catalog.json
+          RP_CATALOG_CONCURRENCY: "8"
+
+      - name: Configure Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+
+      - name: Attest catalog provenance
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        with:
+          subject-path: public/rp-catalog/v1/catalog.json
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: public
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "channel": "rp-stable",
+  "label": "RP Extensions",
+  "base_url": "https://jonathonrp.github.io/extensions/rp-catalog/v1",
+  "upstream_repository": "https://github.com/zed-industries/extensions",
+  "fork_repository": "https://github.com/JonathonRP/extensions",
+  "upstream_api_url": "https://api.zed.dev",
+  "upstream_archive_host": "zed-extensions.nyc3.digitaloceanspaces.com",
+  "additions": {
+    "pigments-lsp": {
+      "submodule": "extensions/pigments-lsp",
+      "path": "zed-pigments",
+      "version": "0.3.1",
+      "source_repository": "https://github.com/JonathonRP/zed-pigments.git",
+      "source_revision": "545ee63ba654a57e322e109b09ff249c908c1ec6",
+      "published_at": "2026-09-02T23:00:44Z"
+    }
+  }
+}
