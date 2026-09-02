@@ -12,7 +12,10 @@
     "integrity",
     "entry_count",
     "upstream_entry_count",
+    "published_upstream_entry_count",
     "additions",
+    "source_entries",
+    "unavailable_source_entries",
     "data",
     "versions",
     "packages"
@@ -41,6 +44,7 @@
     },
     "entry_count": { "type": "integer", "minimum": 1 },
     "upstream_entry_count": { "type": "integer", "minimum": 1 },
+    "published_upstream_entry_count": { "type": "integer", "minimum": 0 },
     "additions": {
       "type": "array",
       "items": {
@@ -48,6 +52,8 @@
         "required": ["id", "version", "source_repository", "source_revision"]
       }
     },
+    "source_entries": { "type": "array" },
+    "unavailable_source_entries": { "type": "array" },
     "data": { "type": "array" },
     "versions": { "type": "object" },
     "packages": {
