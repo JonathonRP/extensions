@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jonathonrp.github.io/extensions/rp-catalog/v1/schema.json",
+  "title": "RP Extensions catalog",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "channel",
+    "label",
+    "generated_at",
+    "source",
+    "integrity",
+    "entry_count",
+    "upstream_entry_count",
+    "additions",
+    "data",
+    "versions",
+    "packages"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "channel": { "const": "rp-stable" },
+    "label": { "const": "RP Extensions" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "object",
+      "required": [
+        "fork_repository",
+        "fork_revision",
+        "upstream_repository",
+        "upstream_revision"
+      ]
+    },
+    "integrity": {
+      "type": "object",
+      "required": [
+        "catalog_digest_algorithm",
+        "catalog_digest_url",
+        "allowed_archive_hosts"
+      ]
+    },
+    "entry_count": { "type": "integer", "minimum": 1 },
+    "upstream_entry_count": { "type": "integer", "minimum": 1 },
+    "additions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "version", "source_repository", "source_revision"]
+      }
+    },
+    "data": { "type": "array" },
+    "versions": { "type": "object" },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "schema_version",
+          "wasm_api_version",
+          "source_repository",
+          "source_revision",
+          "archive_url",
+          "archive_size",
+          "archive_sha256"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

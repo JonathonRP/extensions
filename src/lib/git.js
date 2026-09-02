@@ -41,6 +41,44 @@ export async function readGitmodules(path) {
   return gitSubmodules.deserialize(gitmodulesContent);
 }
 
+/** @param {string} [ref] */
+export async function readGitlinkRevisions(ref = "HEAD") {
+  const { stdout } = await exec("git", ["ls-tree", "-r", ref, "extensions"]);
+  /** @type {Record<string, string>} */
+  const revisions = {};
+  for (const line of stdout.split("\n")) {
+    const match = line.match(
+      /^160000 commit ([a-f0-9]{40})\t(extensions\/.+)$/,
+    );
+    if (match?.[1] && match[2]) {
+      revisions[match[2]] = match[1];
+    }
+  }
+  return revisions;
+}
+
+/** @param {string} [ref] */
+export async function readSubmoduleSources(ref = "HEAD") {
+  const { stdout } = await exec("git", ["show", `${ref}:.gitmodules`]);
+  const gitmodules = gitSubmodules.deserialize(stdout);
+  const revisions = await readGitlinkRevisions(ref);
+  /** @type {Record<string, {url: string, revision: string}>} */
+  const sources = {};
+
+  for (const entry of Object.values(gitmodules)) {
+    const submodulePath = entry["path"];
+    const submoduleUrl = entry["url"];
+    if (!submodulePath || !submoduleUrl) continue;
+    const revision = revisions[submodulePath];
+    if (!revision) {
+      throw new Error(`Missing Git revision for submodule ${submodulePath}.`);
+    }
+    sources[submodulePath] = { url: submoduleUrl, revision };
+  }
+
+  return sources;
+}
+
 /** @param {string} path */
 export async function sortGitmodules(path) {
   const gitmodules = await readGitmodules(path);

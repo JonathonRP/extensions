@@ -8,8 +8,10 @@
     "build": "tsc -p .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "generate-rp-catalog": "node src/generate-rp-catalog.js",
     "package-extensions": "node src/package-extensions.js",
     "sort-extensions": "node src/sort-extensions.js",
+    "validate-rp-registry": "node src/validate-rp-registry.js",
     "danger": "danger"
   },
   "dependencies": {

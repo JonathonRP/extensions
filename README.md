@@ -2,6 +2,10 @@
 
 This is the central repository containing the extensions available for [Zed](https://zed.dev/).
 
+The `JonathonRP/extensions` fork publishes the fork-only
+[RP Extensions catalog](RP_CATALOG.md) from its persistent
+`release/rp-stable` branch. This does not change the upstream Zed registry.
+
 ## Getting started
 
 See the [Developing Extensions](https://zed.dev/docs/extensions/developing-extensions) docs for how to develop your own extension.
