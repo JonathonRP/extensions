@@ -130,11 +130,13 @@ describe("validatePackageRecords", () => {
     const record = {
       id: "rust",
       version: "1.0.0",
+      authority: /** @type {const} */ ("upstream"),
       schema_version: 1,
       wasm_api_version: null,
+      registry_revision: "c".repeat(40),
       source_repository: "https://github.com/example/rust.git",
       source_revision: "a".repeat(40),
-      archive_url: "https://example.com/rust/1.0.0/archive.tar.gz",
+      archive_url: "https://api.zed.dev/extensions/rust/1.0.0/download",
       archive_size: 42,
       archive_sha256: "b".repeat(64),
     };

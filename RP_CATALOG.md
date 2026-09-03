@@ -19,6 +19,19 @@ installable current package in `packages`. Each package binds its ID, version,
 schema/Wasm compatibility, immutable source repository and Git revision,
 archive byte size, archive SHA-256, and HTTPS download URL.
 
+Each package declares `authority` as `upstream` or `rp` and carries the
+corresponding registry revision. The catalog owns metadata and RP additions;
+unchanged upstream archives remain served by Zed's official package authority.
+The `integrity.authorities` object gives separate initial and final host
+allowlists. `package_index` provides deterministic `id@version` lookup.
+
+Each publication carries a decimal, monotonic `snapshot_revision` derived from
+the GitHub Actions run ID, a `snapshot_taken_at` timestamp, exact source and
+installable counts, and `entries_sha256` over the deterministically sorted
+`source_entries`. RP clients persist the highest accepted revision and reject
+lower revisions. `revocations` and `yanks` are explicit empty arrays until
+needed rather than implicit unsupported state.
+
 An upstream source entry that has no matching package in the official service
 remains visible in `source_entries` and is identified in
 `unavailable_source_entries`; it is never presented as installable and no

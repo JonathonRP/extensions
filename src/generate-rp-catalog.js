@@ -43,6 +43,10 @@ import {
 
 const upstreamRevision = requiredEnv("UPSTREAM_REVISION");
 const forkRevision = requiredEnv("FORK_REVISION");
+const snapshotRevision = requiredEnv("SNAPSHOT_REVISION");
+if (!/^[0-9]+$/.test(snapshotRevision)) {
+  throw new Error("SNAPSHOT_REVISION must contain only decimal digits.");
+}
 const outputRoot = process.env["RP_CATALOG_OUTPUT"] ?? "public/rp-catalog/v1";
 const pigmentsArchive =
   process.env["PIGMENTS_ARCHIVE"] ?? "output/archive.tar.gz";
@@ -170,8 +174,12 @@ const results = await mapConcurrent(extensionIds, concurrency, async (id) => {
     package: {
       id,
       version: registryEntry.version,
+      authority: /** @type {"upstream" | "rp"} */ (
+        addition ? "rp" : "upstream"
+      ),
       schema_version: metadata.schema_version ?? 0,
       wasm_api_version: metadata.wasm_api_version ?? null,
+      registry_revision: addition ? forkRevision : upstreamRevision,
       source_repository: source.url,
       source_revision: source.revision,
       archive_url: archiveUrl,
@@ -239,11 +247,31 @@ for (const [index, id] of extensionIds.entries()) {
   versions[id] = result.versions;
 }
 
+const sourceEntries = extensionIds.map((id) => {
+  const registryEntry = current[id];
+  const source = registryEntry ? sources[registryEntry.submodule] : undefined;
+  if (!registryEntry || !source) {
+    throw new Error(`Missing source entry for ${id}.`);
+  }
+  return {
+    id,
+    version: registryEntry.version,
+    source_repository: source.url,
+    source_revision: source.revision,
+    available: !unavailableSourceEntries.some((entry) => entry.id === id),
+  };
+});
+const generatedAt = new Date().toISOString();
+const packageIndex = Object.fromEntries(
+  packages.map((record) => [`${record.id}@${record.version}`, record]),
+);
 const catalog = {
   schema_version: config.schema_version,
   channel: config.channel,
   label: config.label,
-  generated_at: new Date().toISOString(),
+  generated_at: generatedAt,
+  snapshot_revision: snapshotRevision,
+  snapshot_taken_at: generatedAt,
   source: {
     fork_repository: config.fork_repository,
     fork_revision: forkRevision,
@@ -253,40 +281,39 @@ const catalog = {
   integrity: {
     catalog_digest_algorithm: "sha256",
     catalog_digest_url: `${config.base_url}/catalog.json.sha256`,
-    allowed_archive_hosts: [
-      "api.zed.dev",
-      config.upstream_archive_host,
-      "jonathonrp.github.io",
-    ],
+    authorities: {
+      upstream: {
+        initial_hosts: ["api.zed.dev"],
+        final_hosts: [config.upstream_archive_host],
+        owner: "Zed Industries",
+      },
+      rp: {
+        initial_hosts: ["jonathonrp.github.io"],
+        final_hosts: ["jonathonrp.github.io"],
+        owner: "JonathonRP",
+      },
+    },
   },
-  entry_count: extensionIds.length,
+  entry_count: sourceEntries.length,
+  installable_entry_count: packages.length,
   upstream_entry_count: Object.keys(upstream).length,
   published_upstream_entry_count:
     Object.keys(upstream).length - unavailableSourceEntries.length,
+  entries_sha256: sha256(`${JSON.stringify(sourceEntries)}\n`),
   additions: Object.entries(config.additions).map(([id, addition]) => ({
     id,
     version: addition.version,
     source_repository: addition.source_repository,
     source_revision: addition.source_revision,
   })),
-  source_entries: extensionIds.map((id) => {
-    const registryEntry = current[id];
-    const source = registryEntry ? sources[registryEntry.submodule] : undefined;
-    if (!registryEntry || !source) {
-      throw new Error(`Missing source entry for ${id}.`);
-    }
-    return {
-      id,
-      version: registryEntry.version,
-      source_repository: source.url,
-      source_revision: source.revision,
-      available: !unavailableSourceEntries.some((entry) => entry.id === id),
-    };
-  }),
+  source_entries: sourceEntries,
   unavailable_source_entries: unavailableSourceEntries,
+  revocations: [],
+  yanks: [],
   data,
   versions,
   packages,
+  package_index: packageIndex,
 };
 
 const catalogJson = `${JSON.stringify(catalog, null, 2)}\n`;
